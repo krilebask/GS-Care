@@ -110,7 +110,10 @@ const App: React.FC = () => {
         .from('requests')
         .insert([newRequest]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase Insert Error:', error);
+        throw new Error(error.message || 'Gagal menyimpan ke database');
+      }
       
       // Send WhatsApp Notification via Fonnte
       sendWhatsAppNotification(newRequest);
@@ -118,7 +121,7 @@ const App: React.FC = () => {
       setActiveSubMenu(SubMenu.DASHBOARD);
     } catch (error: any) {
       console.error('Error adding request:', error);
-      alert(`Gagal menambah request: ${error.message || 'Cek koneksi database'}`);
+      alert(`Gagal menambah request: ${error.message || 'Cek koneksi database'}\n\nPastikan tabel "requests" sudah dibuat di Supabase.`);
     }
   };
 

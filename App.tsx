@@ -16,7 +16,7 @@ import DashboardView from './components/DashboardView';
 import MessRequestForm from './components/MessRequestForm';
 import KRPRequestForm from './components/KRPRequestForm';
 import MaintenanceRequestForm from './components/MaintenanceRequestForm';
-import { supabase } from './src/supabase';
+import { supabase, supabaseConfigured } from './src/supabase';
 
 const App: React.FC = () => {
   const [activeService, setActiveService] = useState<ServiceType>(ServiceType.MESS);
@@ -42,6 +42,11 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
+    if (!supabaseConfigured) {
+      setIsLoading(false);
+      return;
+    }
+
     fetchRequests();
 
     // Subscribe to real-time changes
@@ -75,6 +80,7 @@ const App: React.FC = () => {
   }, []);
 
   const fetchRequests = async () => {
+    if (!supabaseConfigured) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -92,6 +98,12 @@ const App: React.FC = () => {
   };
 
   const handleAddRequest = async (newRequest: AnyRequest) => {
+    if (!supabaseConfigured) {
+      // Fallback for demo if not configured
+      setRequests(prev => [newRequest, ...prev]);
+      setActiveSubMenu(SubMenu.DASHBOARD);
+      return;
+    }
     try {
       // Remove local ID if we want Supabase to generate it, 
       // but the forms generate one. We'll keep it or let Supabase override.
@@ -109,6 +121,10 @@ const App: React.FC = () => {
   };
 
   const handleUpdateStatus = async (id: string, status: RequestStatus) => {
+    if (!supabaseConfigured) {
+      setRequests(prev => prev.map(req => req.id === id ? { ...req, status } : req));
+      return;
+    }
     try {
       const { error } = await supabase
         .from('requests')
@@ -232,6 +248,18 @@ const App: React.FC = () => {
         {/* Dynamic Content */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-10 scrollbar-hide">
           <div className="max-w-7xl mx-auto">
+            {!supabaseConfigured && (
+              <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center gap-3 text-amber-800 dark:text-amber-200">
+                <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-lg">
+                  <Wrench size={18} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest">Database Belum Terhubung</p>
+                  <p className="text-[9px] font-medium opacity-80">Silakan atur VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di Settings.</p>
+                </div>
+              </div>
+            )}
+
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <Loader2 className="animate-spin mb-4" size={40} />

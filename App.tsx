@@ -8,18 +8,21 @@ import {
   FileText, 
   ChevronRight,
   Sun,
-  Moon
+  Moon,
+  Loader2
 } from 'lucide-react';
 import { ServiceType, SubMenu, AnyRequest, RequestStatus } from './types';
 import DashboardView from './components/DashboardView';
 import MessRequestForm from './components/MessRequestForm';
 import KRPRequestForm from './components/KRPRequestForm';
 import MaintenanceRequestForm from './components/MaintenanceRequestForm';
+import { supabase } from './src/supabase';
 
 const App: React.FC = () => {
   const [activeService, setActiveService] = useState<ServiceType>(ServiceType.MESS);
   const [activeSubMenu, setActiveSubMenu] = useState<SubMenu>(SubMenu.DASHBOARD);
   const [requests, setRequests] = useState<AnyRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' || 
@@ -39,47 +42,85 @@ const App: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    const mockData: AnyRequest[] = [
-      {
-        id: '1',
-        type: ServiceType.MESS,
-        status: RequestStatus.REQUESTED,
-        createdAt: new Date().toISOString(),
-        location: 'Banjarbaru',
-        guestName: 'Budi Santoso',
-        roomCount: 1,
-        requesterName: 'Admin GS',
-        function: 'HRD',
-        guestPhone: '08123456789',
-        checkInDate: '2023-10-01',
-        checkOutDate: '2023-10-03',
-      },
-      {
-        id: '2',
-        type: ServiceType.KRP,
-        status: RequestStatus.ON_PROGRESS,
-        createdAt: new Date().toISOString(),
-        passengerName: 'Siti Aminah',
-        passengerCount: 2,
-        function: 'Finance',
-        passengerPhone: '08112233445',
-        departureDate: '2023-10-02',
-        departureTime: '08:00',
-        isRoundTrip: true,
-        returnDate: '2023-10-02',
-        returnTime: '17:00'
-      }
-    ];
-    setRequests(mockData);
+    fetchRequests();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'requests',
+        },
+        (payload) => {
+          console.log('Change received!', payload);
+          if (payload.eventType === 'INSERT') {
+            setRequests((prev) => [payload.new as AnyRequest, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setRequests((prev) =>
+              prev.map((req) => (req.id === payload.new.id ? (payload.new as AnyRequest) : req))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setRequests((prev) => prev.filter((req) => req.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const handleAddRequest = (newRequest: AnyRequest) => {
-    setRequests(prev => [newRequest, ...prev]);
-    setActiveSubMenu(SubMenu.DASHBOARD);
+  const fetchRequests = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('requests')
+        .select('*')
+        .order('createdAt', { ascending: false });
+
+      if (error) throw error;
+      setRequests(data as AnyRequest[]);
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleUpdateStatus = (id: string, status: RequestStatus) => {
-    setRequests(prev => prev.map(req => req.id === id ? { ...req, status } : req));
+  const handleAddRequest = async (newRequest: AnyRequest) => {
+    try {
+      // Remove local ID if we want Supabase to generate it, 
+      // but the forms generate one. We'll keep it or let Supabase override.
+      const { error } = await supabase
+        .from('requests')
+        .insert([newRequest]);
+
+      if (error) throw error;
+      // Real-time subscription will handle the UI update
+      setActiveSubMenu(SubMenu.DASHBOARD);
+    } catch (error) {
+      console.error('Error adding request:', error);
+      alert('Failed to add request. Please check your connection.');
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, status: RequestStatus) => {
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ status })
+        .eq('id', id);
+
+      if (error) throw error;
+      // Real-time subscription will handle the UI update
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update status.');
+    }
   };
 
   const currentServiceRequests = requests.filter(req => req.type === activeService);
@@ -191,7 +232,12 @@ const App: React.FC = () => {
         {/* Dynamic Content */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-10 scrollbar-hide">
           <div className="max-w-7xl mx-auto">
-            {activeSubMenu === SubMenu.DASHBOARD ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <Loader2 className="animate-spin mb-4" size={40} />
+                <p className="font-bold text-xs uppercase tracking-widest">Memuat Data...</p>
+              </div>
+            ) : activeSubMenu === SubMenu.DASHBOARD ? (
               <DashboardView 
                 requests={currentServiceRequests} 
                 onUpdateStatus={handleUpdateStatus} 

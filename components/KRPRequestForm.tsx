@@ -22,9 +22,8 @@ const KRPRequestForm: React.FC<Props> = ({ onSubmit }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newRequest: KRPRequest = {
+    const newRequest: any = {
       ...formData,
-      id: Math.random().toString(36).substring(2, 9),
       type: ServiceType.KRP,
       status: RequestStatus.REQUESTED,
       createdAt: new Date().toISOString(),

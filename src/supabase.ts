@@ -7,15 +7,13 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const isConfigured = 
   supabaseUrl && 
   supabaseAnonKey && 
-  supabaseUrl.startsWith('https://') &&
-  supabaseUrl !== 'your_supabase_url';
+  supabaseUrl.startsWith('https://');
 
 if (!isConfigured) {
   console.warn('Supabase Configuration Status:', {
     hasUrl: !!supabaseUrl,
     hasKey: !!supabaseAnonKey,
-    validUrl: supabaseUrl.startsWith('https://'),
-    isPlaceholder: supabaseUrl === 'your_supabase_url'
+    validUrl: supabaseUrl?.startsWith('https://')
   });
 } else {
   console.log('Supabase successfully configured.');

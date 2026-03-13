@@ -17,6 +17,7 @@ import MessRequestForm from './components/MessRequestForm';
 import KRPRequestForm from './components/KRPRequestForm';
 import MaintenanceRequestForm from './components/MaintenanceRequestForm';
 import { supabase, supabaseConfigured } from './src/supabase';
+import { sendWhatsAppNotification } from './src/services/whatsappService';
 
 const App: React.FC = () => {
   const [activeService, setActiveService] = useState<ServiceType>(ServiceType.MESS);
@@ -110,6 +111,10 @@ const App: React.FC = () => {
         .insert([newRequest]);
 
       if (error) throw error;
+      
+      // Send WhatsApp Notification via Fonnte
+      sendWhatsAppNotification(newRequest);
+      
       setActiveSubMenu(SubMenu.DASHBOARD);
     } catch (error: any) {
       console.error('Error adding request:', error);

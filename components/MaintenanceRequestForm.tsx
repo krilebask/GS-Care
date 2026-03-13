@@ -37,6 +37,7 @@ const MaintenanceRequestForm: React.FC<Props> = ({ onSubmit }) => {
     e.preventDefault();
     const newRequest: any = {
       ...formData,
+      id: crypto.randomUUID(),
       type: ServiceType.MAINTENANCE,
       status: RequestStatus.REQUESTED,
       createdAt: new Date().toISOString(),

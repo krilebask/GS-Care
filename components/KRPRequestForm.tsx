@@ -24,6 +24,7 @@ const KRPRequestForm: React.FC<Props> = ({ onSubmit }) => {
     e.preventDefault();
     const newRequest: any = {
       ...formData,
+      id: crypto.randomUUID(),
       type: ServiceType.KRP,
       status: RequestStatus.REQUESTED,
       createdAt: new Date().toISOString(),

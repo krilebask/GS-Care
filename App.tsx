@@ -105,18 +105,15 @@ const App: React.FC = () => {
       return;
     }
     try {
-      // Remove local ID if we want Supabase to generate it, 
-      // but the forms generate one. We'll keep it or let Supabase override.
       const { error } = await supabase
         .from('requests')
         .insert([newRequest]);
 
       if (error) throw error;
-      // Real-time subscription will handle the UI update
       setActiveSubMenu(SubMenu.DASHBOARD);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding request:', error);
-      alert('Failed to add request. Please check your connection.');
+      alert(`Gagal menambah request: ${error.message || 'Cek koneksi database'}`);
     }
   };
 

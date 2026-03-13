@@ -1,0 +1,5 @@
+{
+  "name": "General Service",
+  "description": "A comprehensive portal for General Service management including Mess bookings, KRP (Vehicle) requests, and Maintenance tracking with interactive dashboards.",
+  "requestFramePermissions": []
+}
